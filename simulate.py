@@ -166,8 +166,9 @@ class Loan(object):
 
         Parameters
         ----------
-        payment : float
-            Amount to pay towards the loan balance.
+        payment : optional, float
+            Amount to pay towards the loan balance. If set to None, make
+            minimum payment (the default is None)
 
         Returns
         -------
@@ -249,7 +250,7 @@ def parse_loan_data(file: str) -> List[Loan]:
     return loans
 
 
-def generate_report(loan_order: List[Loan],
+def generate_report(loan_order: List[Loan], payoff_strategy,
                     include_balance_history: bool = False,
                     include_payment_history: bool = False,
                     include_payments_left: bool = False) -> Dict[str, dict]:
@@ -263,6 +264,8 @@ def generate_report(loan_order: List[Loan],
     ----------
     loan_order : list of Loan
         List containing Loan objects in the priority order.
+    payoff_strategy : str
+        Selected payoff strategy.
     include_balance_history : optional, bool
         Include the balance history for each loan and the summary (the
         default is False)
@@ -286,6 +289,7 @@ def generate_report(loan_order: List[Loan],
                                                   include_payments_left)
 
     report["summary"] = _generate_summary_report(loan_order,
+                                                 payoff_strategy,
                                                  include_balance_history,
                                                  include_payment_history,
                                                  include_payments_left)
@@ -297,7 +301,8 @@ def _generate_loan_report(loan: Loan, include_balance_history: bool,
                           include_payment_history: bool,
                           include_payments_left: bool) -> dict:
     report = {
-        "months ": len(loan.balance_history),
+        "months ": len([balance for balance in loan.balance_history
+                        if balance > 0]) + 1,
         "principal_paid": loan.principal_paid,
         "interest_paid": loan.interest_paid,
         "total": loan.principal_paid + loan.interest_paid
@@ -316,6 +321,7 @@ def _generate_loan_report(loan: Loan, include_balance_history: bool,
 
 
 def _generate_summary_report(loan_order: List[Loan],
+                             payoff_strategy: str,
                              include_balance_history: bool,
                              include_payment_history: bool,
                              include_payments_left: bool) -> dict:
@@ -326,11 +332,12 @@ def _generate_summary_report(loan_order: List[Loan],
     total = sum([loan.balance_paid for loan in loan_order])
 
     summary = {
+        "payoff_strategy": payoff_strategy,
+        "payoff_order": [loan.name for loan in loan_order],
         "months": months,
-        "principal_paid": principal_paid,
-        "interest_paid": interest_paid,
-        "total": total,
-        "payoff_order": [loan.name for loan in loan_order]
+        "principal_paid": round(principal_paid, 2),
+        "interest_paid": round(interest_paid, 2),
+        "total": round(total, 2)
     }
     
     if include_balance_history:
@@ -388,7 +395,7 @@ def main():
     )
     parser.add_argument("data",
                         help="Path to JSON file containing loan data.")
-    parser.add_argument("--payoff_type", default="default",
+    parser.add_argument("--payoff_strategy", default="default",
                         choices=PAYOFF_PRIORITY.keys(),
                         help="Method to payoff loans.")
     parser.add_argument("--monthly_extra", "-m", type=float, default=0,
@@ -408,10 +415,11 @@ def main():
     args = parser.parse_args()
 
     loans = parse_loan_data(args.data)
-    payoff_order = list(sorted(loans, key=PAYOFF_PRIORITY[args.payoff_type]))
+    payoff_order = sorted(loans, key=PAYOFF_PRIORITY[args.payoff_strategy])
     simulate(payoff_order, args.monthly_extra, args.onetime_extra)
-    report = generate_report(payoff_order, args.balance_history,
-                             args.payment_history, args.remaining_history)
+    report = generate_report(payoff_order, args.payoff_strategy,
+                             args.balance_history, args.payment_history,
+                             args.remaining_history)
 
     if args.output:
         json.dump(report, open(args.output, 'w'), indent=JSON_INDENT_SIZE)
