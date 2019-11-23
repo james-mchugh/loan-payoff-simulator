@@ -1,0 +1,12 @@
+{
+  "some_loan": {
+    "min_payment": 100.00,
+    "balance": 1000.00,
+    "interest": 9.99
+  },
+  "another_loan": {
+    "min_payment": 25.00,
+    "balance": 10000000.00,
+    "interest": 50.00
+  }
+}
