@@ -10,4 +10,4 @@ The script outputs a JSON dump with information about the loans such as which or
 
 For more info, run `simulate.py --help`.
 
-If you have any problems, please feel free to create Issue.
+If you have any problems or suggestions, please feel free to create Issue.
