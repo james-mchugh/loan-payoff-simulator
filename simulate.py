@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Simulate loan payment methods to find the optimal way to pay of loans.
 
 Payment Priority Methods:
